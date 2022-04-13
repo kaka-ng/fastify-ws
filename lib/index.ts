@@ -22,6 +22,7 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
   decorateRequest(fastify)
 
   httpServer.on('upgrade', function (request, socket, head) {
+    request.isWebSocket = false
     request[kSocket] = socket
     request[kSocketHead] = head
 
@@ -32,6 +33,7 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
     } else {
       const response = new ServerResponse(request)
       response.assignSocket(socket as any)
+      request.isWebSocket = true
       fastify.routing(request, response)
     }
   })
@@ -52,6 +54,7 @@ export default fastifyWS
 
 declare module 'http' {
   interface IncomingMessage {
+    isWebSocket: boolean
     [kSocket]: Duplex
     [kSocketHead]: Buffer
   }

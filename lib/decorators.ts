@@ -69,6 +69,7 @@ export interface WebsocketFastifyRequest<
   RawRequest extends RawRequestDefaultExpression<RawServer> = RawRequestDefaultExpression<RawServer>
 > extends FastifyRequest<RequestGeneric, RawServer, RawRequest> {
   [kIsWebsocket]: true
+  isWebSocket: true
   ws: {
     connection: SocketStream
     socket: WebSocket
@@ -81,10 +82,12 @@ export interface WebsocketFastifyRequest<
 
 export function decorateRequest (fastify: FastifyInstance): void {
   fastify.decorateRequest(kIsWebsocket, false)
+  fastify.decorateRequest('isWebSocket', false)
   fastify.decorateRequest('ws', null)
 }
 
 export function resumeWebsocketRequest (fastify: FastifyInstance, request: WebsocketFastifyRequest): void {
+  request.isWebSocket = true
   request.ws = {
     connection: null as any,
     socket: null as any,
