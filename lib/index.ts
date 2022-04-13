@@ -67,6 +67,7 @@ declare module 'fastify' {
 
   interface FastifyRequest {
     [kIsWebsocket]: boolean
+    isWebSocket: boolean
   }
 
   interface RouteOptions extends WebsocketRouteOptions {}

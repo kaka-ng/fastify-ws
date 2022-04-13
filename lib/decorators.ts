@@ -63,6 +63,16 @@ export interface SocketStream extends Duplex {
   socket: WebSocket
 }
 
+// allow to overload ws property
+export interface WebsocketFastifyRequestWS {
+  connection: SocketStream
+  socket: WebSocket
+  subscribe: (topic: string) => void
+  unsubsribe: (topic: string) => void
+  boardcast: (data: any) => void
+  boardcastToTopic: (topic: string, data: any) => void
+}
+
 export interface WebsocketFastifyRequest<
   RequestGeneric extends RequestGenericInterface = RequestGenericInterface,
   RawServer extends RawServerBase = RawServerDefault,
@@ -70,14 +80,7 @@ export interface WebsocketFastifyRequest<
 > extends FastifyRequest<RequestGeneric, RawServer, RawRequest> {
   [kIsWebsocket]: true
   isWebSocket: true
-  ws: {
-    connection: SocketStream
-    socket: WebSocket
-    subscribe: (topic: string) => void
-    unsubsribe: (topic: string) => void
-    boardcast: (data: any) => void
-    boardcastToTopic: (topic: string, data: any) => void
-  }
+  ws: WebsocketFastifyRequestWS
 }
 
 export function decorateRequest (fastify: FastifyInstance): void {
