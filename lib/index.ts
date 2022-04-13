@@ -42,11 +42,13 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
   onClose(fastify, state)
 }
 
-export const WebsocketPlugin = FastifyPlugin(Websocket, {
+export const fastifyWS = FastifyPlugin(Websocket, {
   fastify: '3.x',
-  name: 'plugin-websocket',
-  dependencies: ['plugin-packed']
+  name: '@kakang/fastify-ws',
+  dependencies: []
 })
+
+export default fastifyWS
 
 declare module 'http' {
   interface IncomingMessage {
