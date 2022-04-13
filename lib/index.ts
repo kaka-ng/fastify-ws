@@ -102,5 +102,5 @@ export interface WebsocketPluginOptions {
   duplex?: DuplexOptions
 }
 
-export type { FastifyInstanceWS, WebsocketFastifyRequest } from './decorators'
+export type { FastifyInstanceWS, WebsocketFastifyRequest, WebsocketFastifyRequestWS } from './decorators'
 export type { WebsocketErrorHandler, WebsocketHandler } from './utils'
