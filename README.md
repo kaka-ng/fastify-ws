@@ -11,7 +11,7 @@ This package is a fork of [`fastify-websocket`](https://github.com/fastify/fasti
 
 ## Install
 
-```
+```shell
 npm install @kakang/fastify-ws --save
 
 yarn add @kakang/fastify-ws
@@ -69,7 +69,7 @@ fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
 })
 ```
 
-### WebsocketFastifyRequest#boardcast
+#### WebsocketFastifyRequest#boardcast
 
 Boardcast to all websocket except itself.
 
@@ -84,7 +84,7 @@ fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
 })
 ```
 
-### WebsocketFastifyRequest#boardcastToTopic
+#### WebsocketFastifyRequest#boardcastToTopic
 
 Boardcast to all websocket in specified topic except itself.
 
@@ -103,7 +103,7 @@ fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
 
 This plugin also decorate the fastify instance to provide more ability for normal route communicate to the websocket.
 
-### FastifyInstance#server
+#### FastifyInstance#server
 
 [`ws`](https://github.com/websockets/ws) Server instance.
 
@@ -115,7 +115,7 @@ fastify.register(fastifyWS)
 fastify.ws.server // ws instance
 ```
 
-### FastifyInstance#clients
+#### FastifyInstance#clients
 
 All avaiable websocket clients. It is a shortcut of `fastify.ws.server.clients`
 
@@ -128,7 +128,7 @@ fastify.ws.clients // websocket clients
 fastify.ws.server.clients = fastify.ws.clients // true
 ```
 
-### FastifyInstance#topics
+#### FastifyInstance#topics
 
 All topics that have registered before.
 
@@ -142,7 +142,7 @@ for(const topic of fastify.ws.topics) {
 }
 ```
 
-### FastifyInstance#topicMap
+#### FastifyInstance#topicMap
 
 All topic with WebsocketFastifyRequest.
 
@@ -158,7 +158,7 @@ for(const [topic, requests] of fastify.ws.topicMap.entries()) {
 }
 ```
 
-### FastifyInstance#boardcast
+#### FastifyInstance#boardcast
 
 Boardcast to all websocket.
 
@@ -170,7 +170,7 @@ fastify.register(fastifyWS)
 fastify.ws.boardcast('hello all.')
 ```
 
-### FastifyInstance#boardcastToTopic
+#### FastifyInstance#boardcastToTopic
 
 Boardcast to all websocket in specified topic.
 
