@@ -1,0 +1,59 @@
+{
+  "name": "@kakang/fastify-ws",
+  "version": "0.0.0",
+  "description": "",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/mjs/index.js",
+      "require": "./lib/index.js"
+    }
+  },
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "clean": "npx rimraf \"lib/**/*.js\" \"lib/**/*.map\" \"lib/**/*.d.ts\" \"test/**/*.js\" \"test/**/*.map\" \"test/**/*.d.ts\"",
+    "lint": "eslint --ext .ts lib test",
+    "lint:fix": "npm run lint -- --fix",
+    "build": "rollup -c",
+    "build:tsc": "tsc -b",
+    "unit": "tap",
+    "test": "npm run lint && npm run unit",
+    "coverage": "tap --coverage --coverage-report=lcovonly",
+    "prepublishOnly": "npm run build",
+    "postpublish": "npm run clean"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kaka-repo/fastify-ws.git"
+  },
+  "author": "KaKa",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@rollup/plugin-typescript": "^8.3.0",
+    "@types/tap": "^15.0.5",
+    "@typescript-eslint/eslint-plugin": "^4.0.1",
+    "eslint": "^7.12.1",
+    "eslint-config-standard-with-typescript": "^21.0.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.0.0",
+    "fastify": "^3.22.1",
+    "prettier": "^2.4.1",
+    "rollup": "^2.58.1",
+    "tap": "^15.0.10",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  },
+  "dependencies": {
+    "@types/ws": "^8.5.3",
+    "fastify-plugin": "^3.0.0",
+    "ws": "^8.5.0"
+  }
+}
