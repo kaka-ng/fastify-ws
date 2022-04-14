@@ -56,7 +56,7 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
 
     // we always override the route handler so we can close websocket connections to routes to handlers that don't support websocket connections
     // This is not an arrow function to fetch the encapsulated this
-    routeOption.handler = function (request, reply) {
+    routeOption.handler = async function (request, reply) {
       // within the route handler, we check if there has been a connection upgrade by looking at request.raw[kWs]. we need to dispatch the normal HTTP handler if not, and hijack to dispatch the websocket handler if so
       if (request[kIsWebsocket]) {
         const webSocketRequest = request as WebsocketFastifyRequest
@@ -90,7 +90,7 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
           }
         })
       } else {
-        void httpHandler.call(this, request, reply)
+        return await httpHandler.call(this, request, reply)
       }
     }
   })
