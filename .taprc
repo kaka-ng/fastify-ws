@@ -5,5 +5,5 @@ check-coverage: true
 coverage: true
 lines: 75
 functions: 59
-statements: 47
-branches: 74
+statements: 74
+branches: 47
