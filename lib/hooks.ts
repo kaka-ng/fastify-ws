@@ -96,18 +96,18 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
   })
 }
 
-export function onClose (fastify: FastifyInstance, { isClosing }: { isClosing: boolean }): void {
-  // onClose fire before fastify.server.close
-  // it ensure we do not accept new websocket
-  fastify.addHook('onClose', function () {
-    isClosing = true
-  })
+export function onClose (fastify: FastifyInstance, options: { isClosing: boolean }): void {
+  const oldClose = fastify.server.close
+  // @ts-expect-error
+  fastify.server.close = function (callback) {
+    options.isClosing = true
 
-  // we close the socket when server close event fired
-  // it means the actual server do not accept new connection
-  fastify.server.on('close', function () {
+    // Call oldClose first so that we stop listening. This ensures the
+    // server.clients list will be up to date when we start closing below.
+    oldClose.call(this, callback)
+
     for (const client of fastify.ws.clients) {
       client.close()
     }
-  })
+  }
 }

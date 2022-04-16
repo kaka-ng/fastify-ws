@@ -104,6 +104,8 @@ export function resumeWebsocketRequest (fastify: FastifyInstance, request: Webso
       if (fastify.ws.topicMap.has(topic)) {
         const set = fastify.ws.topicMap.get(topic) as Set<WebsocketFastifyRequest>
         set.delete(request)
+        // remove topic when size is zero
+        if (set.size === 0) fastify.ws.topicMap.delete(topic)
       }
     },
     // it boardcast except itself

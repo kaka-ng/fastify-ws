@@ -98,7 +98,7 @@ export interface WebsocketRouteOptions {
 
 export interface WebsocketPluginOptions {
   errorHandler?: WebsocketErrorHandler
-  ws: Omit<ServerOptions, 'path' | 'noServer'>
+  ws?: Omit<ServerOptions, 'path' | 'noServer'>
   duplex?: DuplexOptions
 }
 
