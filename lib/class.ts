@@ -79,7 +79,7 @@ export class WebSocketEventEmitter extends EventEmitter {
   _onceClose (): void {
     super.emit('close')
     if (this._heartbeatIntervalTimer !== undefined) clearInterval(this._heartbeatIntervalTimer)
-    if (this._heartbeatTimeoutTimer !== undefined) clearInterval(this._heartbeatTimeoutTimer)
+    if (this._heartbeatTimeoutTimer !== undefined) clearTimeout(this._heartbeatTimeoutTimer)
   }
 
   _setupHeartbeat (): void {
@@ -94,7 +94,7 @@ export class WebSocketEventEmitter extends EventEmitter {
       this.on('heartbeat', (data) => {
         // we reply when heartbeat is ping
         if (data === 'ping') this.emit('heartbeat', 'pong')
-        if (this._heartbeatTimeoutTimer !== undefined) clearInterval(this._heartbeatTimeoutTimer)
+        if (this._heartbeatTimeoutTimer !== undefined) clearTimeout(this._heartbeatTimeoutTimer)
       })
     }
   }
