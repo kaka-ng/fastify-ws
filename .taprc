@@ -3,7 +3,7 @@ jsx: false
 flow: false
 check-coverage: true
 coverage: true
-lines: 75
-functions: 59
-statements: 74
-branches: 47
+lines: 70
+functions: 55
+statements: 65
+branches: 45

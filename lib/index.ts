@@ -3,6 +3,7 @@ import FastifyPlugin from 'fastify-plugin'
 import { ServerResponse } from 'http'
 import { Duplex, DuplexOptions } from 'stream'
 import { ServerOptions } from 'ws'
+import { WebSocketEventEmitterOption } from './class'
 import { decorateInstance, decorateRequest, FastifyInstanceWS } from './decorators'
 import { onClose, onError, onRequest, onRoute } from './hooks'
 import { createServer } from './server'
@@ -18,7 +19,7 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
   const { httpServer, wsServer } = createServer(fastify, options)
   const state = { isClosing: false }
 
-  decorateInstance(fastify, wsServer)
+  decorateInstance(fastify, wsServer, options.event ?? {})
   decorateRequest(fastify)
 
   httpServer.on('upgrade', function (request, socket, head) {
@@ -99,6 +100,7 @@ export interface WebsocketRouteOptions {
 export interface WebsocketPluginOptions {
   errorHandler?: WebsocketErrorHandler
   ws?: Omit<ServerOptions, 'path' | 'noServer'>
+  event?: WebSocketEventEmitterOption
   duplex?: DuplexOptions
 }
 
