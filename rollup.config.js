@@ -7,7 +7,7 @@ export default [
       { dir: 'lib', format: 'cjs', sourcemap: true },
     ],
     plugins: [TypeScript({ module: 'ESNext', outDir: 'lib', include: ['lib/**/*'] })],
-    external: ['@kakang/validator', 'fastify-plugin']
+    external: ['@kakang/validator', 'fastify-plugin', 'http', 'ws']
   },
   {
     input: 'lib/index.ts',
@@ -15,6 +15,6 @@ export default [
       { dir: 'lib/mjs', format: 'esm', sourcemap: true },
     ],
     plugins: [TypeScript({ module: 'ESNext', outDir: 'lib/mjs', include: ['lib/**/*'] })],
-    external: ['@kakang/validator', 'fastify-plugin']
+    external: ['@kakang/validator', 'fastify-plugin', 'http', 'ws']
   },
 ]
