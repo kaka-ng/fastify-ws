@@ -84,21 +84,6 @@ fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
 })
 ```
 
-#### WebsocketFastifyRequest#boardcastToTopic
-
-Boardcast to all websocket in specified topic except itself.
-
-```ts
-import Fastify from 'fastify'
-import { fastifyWS } from '@kakang/fastify-ws'
-
-fastify.register(fastifyWS)
-fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
-  const { boardcastToTopic } = request.ws
-  boardcastToTopic('foo', 'hello foo.')
-})
-```
-
 ### FastifyInstance
 
 This plugin also decorate the fastify instance to provide more ability for normal route communicate to the websocket.

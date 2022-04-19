@@ -63,15 +63,9 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
         void reply.hijack()
         handleUpgrade(fastify.ws.server, options, request.raw, function (connection) {
           let result
-          webSocketRequest.ws.connection = connection
-          webSocketRequest.ws.socket = connection.socket
-
-          // we register a close event handler to remove topics reference
-          connection.socket.once('close', function () {
-            for (const set of fastify.ws.topicMap.values()) {
-              if (set.has(webSocketRequest)) set.delete(webSocketRequest)
-            }
-          })
+          webSocketRequest.ws = fastify.ws.createWebSocketEventEmitter(connection)
+          // we allow to use the request inside ws class
+          webSocketRequest.ws.request = webSocketRequest
 
           try {
             if (isWebsocketRoute) {
@@ -106,8 +100,6 @@ export function onClose (fastify: FastifyInstance, options: { isClosing: boolean
     // server.clients list will be up to date when we start closing below.
     oldClose.call(this, callback)
 
-    for (const client of fastify.ws.clients) {
-      client.close()
-    }
+    fastify.ws.close()
   }
 }
