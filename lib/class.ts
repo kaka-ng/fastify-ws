@@ -63,13 +63,15 @@ export class WebSocketEventEmitter extends EventEmitter {
       data = this._formatMessage(raw, isBuffer)
       event = 'buffer'
     } else {
-      const d = this._formatMessage(raw, isBuffer) ?? {}
-      event = d.event
+      let d = this._formatMessage(raw, isBuffer) ?? {}
       try {
+        d = JSON.parse(d)
         // auto json parse
-        data = JSON.parse(d.data)
-      } catch {
+        event = d.event
         data = d.data
+      } catch {
+        event = 'error'
+        data = d
       }
     }
     super.emit(event, data)
@@ -87,6 +89,8 @@ export class WebSocketEventEmitter extends EventEmitter {
       // we send heartbeat by interval
       this._heartbeatIntervalTimer = setInterval(() => {
         this.emit('heartbeat', 'ping')
+        // remove old one before adding new
+        if (this._heartbeatTimeoutTimer !== undefined) clearTimeout(this._heartbeatTimeoutTimer)
         this._heartbeatTimeoutTimer = setTimeout(() => {
           this.close(1000)
         }, this._heartbeatOption?.allowance)
