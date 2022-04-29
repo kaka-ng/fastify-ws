@@ -7,8 +7,11 @@ const kUnsubsribe = Symbol('kUnsubsribe')
 const kBoardcast = Symbol('kBoardcast')
 const kUpStream = Symbol('kUpStream')
 
+type WebSocketFilter = (event: WebSocketEventEmitter) => boolean
+
 interface BoardcastOption {
   topic?: string[]
+  filter?: WebSocketFilter
   exceptSelf?: boolean
   _self?: WebSocketEventEmitter
 }
@@ -201,12 +204,14 @@ export class GlobalWebSocketEventEmitter extends EventEmitter {
         const set = this._topicMap.get(topic) as Set<WebSocketEventEmitter>
         for (const socket of set) {
           if ((options as BoardcastOption).exceptSelf === true && socket === (options as BoardcastOption)?._self) continue
+          if (options.filter && !options.filter(socket)) continue 
           socket.emit(event, data)
         }
       }
     } else {
       for (const socket of this.sockets) {
         if ((options as BoardcastOption).exceptSelf === true && socket === (options as BoardcastOption)?._self) continue
+        if (options.filter && !options.filter(socket)) continue 
         socket.emit(event, data)
       }
     }
