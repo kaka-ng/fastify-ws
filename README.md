@@ -54,9 +54,9 @@ fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
 })
 ```
 
-#### WebsocketFastifyRequest#unsubsribe
+#### WebsocketFastifyRequest#unsubscribe
 
-Unsubsribe from a topic.
+Unsubscribe from a topic.
 
 ```ts
 import Fastify from 'fastify'
@@ -64,8 +64,8 @@ import { fastifyWS } from '@kakang/fastify-ws'
 
 fastify.register(fastifyWS)
 fastify.get('/', { ws: true }, (request /* WebsocketFastifyRequest */) => {
-  const { unsubsribe } = request.ws
-  unsubsribe('foo')
+  const { unsubscribe } = request.ws
+  unsubscribe('foo')
 })
 ```
 

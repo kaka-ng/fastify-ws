@@ -2,12 +2,13 @@ import { EventEmitter } from 'events'
 import WebSocket, { Server } from 'ws'
 import { SocketStream, WebsocketFastifyRequest } from './decorators'
 
-const kSubsribe = Symbol('kSubsribe')
-const kUnsubsribe = Symbol('kUnsubsribe')
+const kSubscribe = Symbol('kSubscribe')
+const kUnsubscribe = Symbol('kUnsubscribe')
 const kBoardcast = Symbol('kBoardcast')
 const kUpStream = Symbol('kUpStream')
 
-type WebSocketFilter = (event: WebSocketEventEmitter) => boolean
+type WebSocketFilter = (request: WebsocketFastifyRequest, event: WebSocketEventEmitter) => boolean
+type WebSocketTopicComparator = (given: Set<string>, expected?: string[]) => boolean
 
 interface BoardcastOption {
   topic?: string[]
@@ -16,16 +17,26 @@ interface BoardcastOption {
   _self?: WebSocketEventEmitter
 }
 
+function defaultTopicComparator (given: Set<string>, expected?: string[]): boolean {
+  if (expected === undefined || expected.length === 0) return true
+  for (const l of Array.from(given)) {
+    if (expected.includes(l)) return true
+  }
+  return false
+}
+
 export interface WebSocketEventEmitterOption {
   heartbeat?: {
     interval: number
     allowance: number
   }
+  topicComparator?: WebSocketTopicComparator
 }
 
 export class WebSocketEventEmitter extends EventEmitter {
   connection: SocketStream
   request!: WebsocketFastifyRequest
+  topic: Set<string>
   _heartbeat: boolean
   _heartbeatOption?: WebSocketEventEmitterOption['heartbeat']
   _heartbeatIntervalTimer?: NodeJS.Timeout
@@ -39,6 +50,7 @@ export class WebSocketEventEmitter extends EventEmitter {
     super()
     this.connection = connection
     this.request = null as any
+    this.topic = new Set()
     this.socket.on('message', this._onMessage.bind(this))
     this.socket.once('close', this._onceClose.bind(this))
     this._heartbeat = typeof options?.heartbeat === 'object'
@@ -107,12 +119,14 @@ export class WebSocketEventEmitter extends EventEmitter {
   }
 
   subscribe (topic: string): this {
-    super.emit(kSubsribe, topic)
+    this.topic.add(topic)
+    super.emit(kSubscribe, topic)
     return this
   }
 
-  unsubsribe (topic: string): this {
-    super.emit(kUnsubsribe, topic)
+  unsubscribe (topic: string): this {
+    this.topic.delete(topic)
+    super.emit(kUnsubscribe, topic)
     return this
   }
 
@@ -136,14 +150,15 @@ export class GlobalWebSocketEventEmitter extends EventEmitter {
   server: Server
   sockets: Set<WebSocketEventEmitter>
   _options: WebSocketEventEmitterOption
-  _topicMap: Map<string, Set<WebSocketEventEmitter>>
+  _topic: Set<string>
+  _topicComparator: WebSocketTopicComparator
 
   get clients (): Set<WebSocket> {
     return this.server.clients
   }
 
   get topics (): string[] {
-    return Array.from(this._topicMap.keys())
+    return Array.from(this._topic)
   }
 
   constructor (server: Server, options?: WebSocketEventEmitterOption) {
@@ -151,17 +166,18 @@ export class GlobalWebSocketEventEmitter extends EventEmitter {
     this.server = server
     this.sockets = new Set()
     this._options = options ?? {}
-    this._topicMap = new Map()
+    this._topic = new Set()
+    this._topicComparator = options?.topicComparator ?? defaultTopicComparator
   }
 
   createWebSocketEventEmitter (connection: SocketStream): WebSocketEventEmitter {
     const event = new WebSocketEventEmitter(connection, this._options)
     this.sockets.add(event)
-    event.on(kSubsribe, (topic: string) => {
+    event.on(kSubscribe, (topic: string) => {
       this.subscribe(topic, event)
     })
-    event.on(kUnsubsribe, (topic: string) => {
-      this.unsubsribe(topic, event)
+    event.on(kUnsubscribe, (topic: string) => {
+      this.unsubscribe(topic, event)
     })
     event.on(kBoardcast, ({ event, data, options }) => {
       options._self = event
@@ -172,48 +188,43 @@ export class GlobalWebSocketEventEmitter extends EventEmitter {
     })
     event.once('close', () => {
       this.sockets.delete(event)
-      // we unsubsribe the socket related topic
+      // we unsubscribe the socket related topic
       for (const topic of this.topics) {
-        this.unsubsribe(topic, event)
+        this.unsubscribe(topic, event)
       }
     })
     return event
   }
 
-  subscribe (topic: string, websocket: WebSocketEventEmitter): this {
-    if (!this._topicMap.has(topic)) this._topicMap.set(topic, new Set())
-    const set = this._topicMap.get(topic) as Set<WebSocketEventEmitter>
-    set.add(websocket)
+  subscribe (topic: string, _websocket: WebSocketEventEmitter): this {
+    this._topic.add(topic)
     return this
   }
 
-  unsubsribe (topic: string, websocket: WebSocketEventEmitter): this {
-    if (!this._topicMap.has(topic)) return this
-    const set = this._topicMap.get(topic) as Set<WebSocketEventEmitter>
-    set.delete(websocket)
-    if (set.size === 0) this._topicMap.delete(topic)
+  unsubscribe (topic: string, _websocket: WebSocketEventEmitter): this {
+    this._topic.delete(topic)
     return this
   }
 
   // same as boardcast
   emit (event: string, data: any, options?: Omit<BoardcastOption, 'exceptSelf' | '_self'>): boolean {
     options = Object.assign({ exceptSelf: false }, options)
-    if (options.topic !== undefined) {
-      for (const topic of options.topic) {
-        if (!this._topicMap.has(topic)) continue
-        const set = this._topicMap.get(topic) as Set<WebSocketEventEmitter>
-        for (const socket of set) {
-          if ((options as BoardcastOption).exceptSelf === true && socket === (options as BoardcastOption)?._self) continue
-          if (options.filter && !options.filter(socket)) continue 
-          socket.emit(event, data)
+    const includedTopic = options.topic ?? []
+    const socketFilter = options.filter ?? function () { return true }
+    const sockets: WebSocketEventEmitter[] = []
+    if (includedTopic.length > 0) {
+      for (const socket of this.sockets) {
+        if (this._topicComparator(socket.topic, includedTopic)) {
+          sockets.push(socket)
         }
       }
     } else {
-      for (const socket of this.sockets) {
-        if ((options as BoardcastOption).exceptSelf === true && socket === (options as BoardcastOption)?._self) continue
-        if (options.filter && !options.filter(socket)) continue 
-        socket.emit(event, data)
-      }
+      sockets.push(...this.sockets)
+    }
+    for (const socket of sockets) {
+      if ((options as BoardcastOption).exceptSelf === true && socket === (options as BoardcastOption)?._self) continue
+      if (!socketFilter(socket.request, socket)) continue
+      socket.emit(event, data)
     }
     return true
   }
