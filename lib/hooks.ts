@@ -36,6 +36,7 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
     let httpHandler = routeOption.handler
 
     if (routeOption.ws === true || typeof wsHandler === 'function') {
+      if (routeOption.method === 'HEAD') return
       if (routeOption.method !== 'GET') {
         throw new Error('websocket handler can only be declared in GET method')
       }
@@ -84,7 +85,7 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
           }
         })
       } else {
-        return await httpHandler.call(this, request, reply)
+        return httpHandler.call(this, request, reply)
       }
     }
   })

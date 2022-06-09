@@ -1,82 +1,10 @@
 import Fastify from 'fastify'
+import { once } from 'stream'
 import t from 'tap'
 import { AddressInfo, WebSocket } from 'ws'
 import { fastifyWS } from '../lib'
 
-t.test('should expose websocket', function (t) {
-  t.plan(3)
-
-  const fastify = Fastify()
-  t.teardown(function () {
-    fastify.close()
-  })
-
-  fastify.register(fastifyWS)
-
-  fastify.get('/', { ws: true }, function (request) {
-    request.ws.connection.setEncoding('utf8')
-    request.ws.connection.write('hello client')
-
-    request.ws.connection.once('data', function (chunk) {
-      t.equal(chunk, 'hello server')
-      request.ws.connection.end()
-    })
-  })
-
-  fastify.listen(0, function (error) {
-    t.error(error)
-
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-
-    socket.setEncoding('utf8')
-    socket.write('hello server')
-    socket.once('data', function (chunk) {
-      t.equal(chunk, 'hello client')
-      socket.end()
-    })
-  })
-})
-
-t.test('should not fail if custom errorHandler is not a function', function (t) {
-  t.plan(3)
-
-  const fastify = Fastify()
-  t.teardown(function () {
-    fastify.close()
-  })
-
-  fastify.register(fastifyWS, {
-    // @ts-expect-error
-    errorHandler: {}
-  })
-
-  fastify.get('/', { ws: true }, function (request) {
-    request.ws.connection.setEncoding('utf8')
-    request.ws.connection.write('hello client')
-    request.ws.connection.once('data', function (chunk) {
-      t.equal(chunk, 'hello server')
-      request.ws.connection.end()
-    })
-  })
-
-  fastify.listen(0, function (error) {
-    t.error(error)
-
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-    socket.setEncoding('utf8')
-    socket.write('hello server')
-    socket.once('data', function (chunk) {
-      t.equal(chunk, 'hello client')
-      socket.end()
-    })
-  })
-})
-
-t.test('should run custom errorHandler on wildcard route handler error', function (t) {
+t.test('should expose websocket', async function (t) {
   t.plan(2)
 
   const fastify = Fastify()
@@ -84,10 +12,85 @@ t.test('should run custom errorHandler on wildcard route handler error', functio
     fastify.close()
   })
 
-  fastify.register(fastifyWS, {
+  await fastify.register(fastifyWS)
+
+  fastify.get('/', { ws: true }, function (request) {
+    request.ws.connection.setEncoding('utf8')
+
+    request.ws.connection.once('data', function (chunk) {
+      t.equal(chunk, 'hello server')
+      request.ws.connection.write('hello client')
+      request.ws.connection.end()
+    })
+  })
+
+  await fastify.listen({ port: 0 })
+
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+
+  socket.setEncoding('utf8')
+  socket.write('hello server')
+  const [chunk] = await once(socket, 'data')
+  t.equal(chunk, 'hello client')
+  socket.end()
+})
+
+t.test('should not fail if custom errorHandler is not a function', async function (t) {
+  t.plan(2)
+
+  const fastify = Fastify()
+  t.teardown(function () {
+    fastify.close()
+  })
+
+  await fastify.register(fastifyWS, {
+    // @ts-expect-error
+    errorHandler: {}
+  })
+
+  fastify.get('/', { ws: true }, function (request) {
+    request.ws.connection.setEncoding('utf8')
+
+    request.ws.connection.once('data', function (chunk) {
+      t.equal(chunk, 'hello server')
+      request.ws.connection.write('hello client')
+      request.ws.connection.end()
+    })
+  })
+
+  await fastify.listen({ port: 0 })
+
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+
+  socket.setEncoding('utf8')
+  socket.write('hello server')
+  const [chunk] = await once(socket, 'data')
+  t.equal(chunk, 'hello client')
+  socket.end()
+})
+
+t.test('should run custom errorHandler on wildcard route handler error', async function (t) {
+  t.plan(1)
+
+  let _resolve: Function
+  const p = new Promise((resolve) => {
+    _resolve = resolve
+  })
+
+  const fastify = Fastify()
+  t.teardown(function () {
+    fastify.close()
+  })
+
+  await fastify.register(fastifyWS, {
     errorHandler: function (error: any, connection) {
       t.equal(error.message, 'Fail')
       connection.end()
+      _resolve()
     }
   })
 
@@ -96,27 +99,33 @@ t.test('should run custom errorHandler on wildcard route handler error', functio
     throw new Error('Fail')
   })
 
-  fastify.listen(0, function (error) {
-    t.error(error)
+  await fastify.listen({ port: 0 })
 
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-  })
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+
+  await p
 })
 
-t.test('should run custom errorHandler on wsHandler', function (t) {
-  t.plan(2)
+t.test('should run custom errorHandler on wsHandler', async function (t) {
+  t.plan(1)
+
+  let _resolve: Function
+  const p = new Promise((resolve) => {
+    _resolve = resolve
+  })
 
   const fastify = Fastify()
   t.teardown(function () {
     fastify.close()
   })
 
-  fastify.register(fastifyWS, {
+  await fastify.register(fastifyWS, {
     errorHandler: function (error: any, connection) {
       t.equal(error.message, 'Fail')
       connection.end()
+      _resolve()
     }
   })
 
@@ -125,27 +134,33 @@ t.test('should run custom errorHandler on wsHandler', function (t) {
     throw new Error('Fail')
   })
 
-  fastify.listen(0, function (error) {
-    t.error(error)
+  await fastify.listen({ port: 0 })
 
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-  })
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+
+  await p
 })
 
-t.test('should run custom errorHandler on async wsHandler', function (t) {
-  t.plan(2)
+t.test('should run custom errorHandler on async wsHandler', async function (t) {
+  t.plan(1)
+
+  let _resolve: Function
+  const p = new Promise((resolve) => {
+    _resolve = resolve
+  })
 
   const fastify = Fastify()
   t.teardown(function () {
     fastify.close()
   })
 
-  fastify.register(fastifyWS, {
+  await fastify.register(fastifyWS, {
     errorHandler: function (error: any, connection) {
       t.equal(error.message, 'Fail')
       connection.end()
+      _resolve()
     }
   })
 
@@ -154,28 +169,28 @@ t.test('should run custom errorHandler on async wsHandler', function (t) {
     throw new Error('Fail')
   })
 
-  fastify.listen(0, function (error) {
-    t.error(error)
+  await fastify.listen({ port: 0 })
 
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-  })
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+
+  await p
 })
 
-t.test('should gracefully close connected client', function (t) {
-  t.plan(5)
+t.test('should gracefully close connected client', async function (t) {
+  t.plan(4)
 
   const fastify = Fastify()
 
-  fastify.register(fastifyWS)
+  await fastify.register(fastifyWS)
 
   fastify.get('/', { ws: true }, function (request) {
     request.ws.connection.setEncoding('utf8')
-    request.ws.connection.write('hello client')
 
     request.ws.connection.once('data', function (chunk) {
       t.equal(chunk, 'hello server')
+      request.ws.connection.write('hello client')
     })
 
     request.ws.connection.on('end', () => {
@@ -183,30 +198,26 @@ t.test('should gracefully close connected client', function (t) {
     })
   })
 
-  fastify.listen(0, function (error) {
-    t.error(error)
+  await fastify.listen({ port: 0 })
 
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
-
-    socket.setEncoding('utf8')
-    socket.write('hello server')
-    socket.once('data', function (chunk) {
-      t.equal(chunk, 'hello client')
-      fastify.close()
-    })
-    socket.on('end', () => {
-      t.pass('end emitted on client side')
-    })
-  })
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+  const socket = WebSocket.createWebSocketStream(ws, { encoding: 'utf8' })
+  socket.setEncoding('utf8')
+  socket.write('hello server')
+  const [chunk] = await once(socket, 'data')
+  t.equal(chunk, 'hello client')
+  fastify.close()
+  await once(socket, 'end')
+  t.pass('end emitted on client side')
 })
 
-t.test('should gracefully close when clients attempt to connect after close', function (t) {
-  t.plan(4)
-  let closedConnectionCount = 0
+t.test('should gracefully close when clients attempt to connect after close', async function (t) {
+  t.plan(3)
 
   const fastify = Fastify()
+
+  let p: Promise<void>
 
   const oldClose = fastify.server.close
   // @ts-expect-error
@@ -214,9 +225,8 @@ t.test('should gracefully close when clients attempt to connect after close', fu
     const port = (fastify.server.address() as AddressInfo).port
     const ws = new WebSocket(`ws://localhost:${port}`)
 
-    ws.on('close', function () {
-      closedConnectionCount++
-      t.equal(closedConnectionCount, 2, 'client 2 closed')
+    p = once(ws, 'close').then(() => {
+      t.pass('client 2 closed')
     })
 
     ws.on('open', function () {
@@ -224,25 +234,25 @@ t.test('should gracefully close when clients attempt to connect after close', fu
     })
   }
 
-  fastify.register(fastifyWS)
+  await fastify.register(fastifyWS)
 
   fastify.get('/', { ws: true }, function (request) {
     t.pass('received client connection')
   })
 
-  fastify.listen(0, function (error) {
-    t.error(error)
+  await fastify.listen({ port: 0 })
 
-    const port = (fastify.server.address() as AddressInfo).port
-    const ws = new WebSocket(`ws://localhost:${port}`)
-    ws.on('open', function () {
-      fastify.close()
-    })
-    ws.on('close', function () {
-      closedConnectionCount++
-      t.equal(closedConnectionCount, 1, 'client 1 closed')
-    })
+  const port = (fastify.server.address() as AddressInfo).port
+  const ws = new WebSocket(`ws://localhost:${port}`)
+
+  ws.on('close', function () {
+    t.pass('client 1 closed')
   })
+
+  await once(ws, 'open')
+  await fastify.close()
+  // @ts-expect-error
+  await p
 })
 
 /*
@@ -286,7 +296,7 @@ t.test('should keep accepting connection', { skip: true }, function (t) {
     }, 100)
   })
 
-  fastify.listen(0, function (error) {
+  fastify.listen({ port: 0 }, function (error) {
     t.error(error)
 
     // Setup a client that sends a lot of messages to the server

@@ -46,7 +46,7 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
 }
 
 export const fastifyWS = FastifyPlugin(Websocket, {
-  fastify: '3.x',
+  fastify: '4.x',
   name: '@kakang/fastify-ws',
   dependencies: []
 })
@@ -87,8 +87,9 @@ declare module 'fastify' {
     ): FastifyInstance
   }
 
-  interface FastifyInstance<RawServer, RawRequest, RawReply> {
-    get: RouteShorthandMethod<RawServer, RawRequest, RawReply>
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface FastifyInstance<RawServer, RawRequest, RawReply, Logger, TypeProvider> {
+    get: RouteShorthandMethod<RawServer, RawRequest, RawReply, TypeProvider>
     ws: FastifyInstanceWS
   }
 }
