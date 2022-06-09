@@ -1,6 +1,6 @@
 {
   "name": "@kakang/fastify-ws",
-  "version": "0.0.13",
+  "version": "1.0.0",
   "description": "",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
