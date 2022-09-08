@@ -15,20 +15,6 @@ export function onRequest (fastify: FastifyInstance): void {
   })
 }
 
-export function onError (fastify: FastifyInstance, options: DuplexOptions, errorHandler: Function): void {
-  fastify.addHook('onError', function (request, reply, error, done) {
-    if (typeof request.raw[kSocket] === 'object') {
-      // Hijack reply to prevent fastify from sending the error after onError hooks are done running
-      void reply.hijack()
-      handleUpgrade(fastify.ws.server, options, request.raw, function (connection) {
-        // Handle the error
-        void errorHandler(error, connection, request, reply)
-      })
-    }
-    done()
-  })
-}
-
 export function onRoute (fastify: FastifyInstance, options: DuplexOptions, errorHandler: Function): void {
   fastify.addHook('onRoute', function (routeOption) {
     let isWebsocketRoute = false

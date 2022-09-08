@@ -5,7 +5,7 @@ import { Duplex, DuplexOptions } from 'stream'
 import { ServerOptions } from 'ws'
 import { WebSocketEventEmitterOption } from './class'
 import { decorateInstance, decorateRequest, FastifyInstanceWS } from './decorators'
-import { onClose, onError, onRequest, onRoute } from './hooks'
+import { onClose, onRequest, onRoute } from './hooks'
 import { createServer } from './server'
 import { kIsWebsocket, kSocket, kSocketHead } from './symbols'
 import { defaultErrorHandler, handleUpgrade, WebsocketErrorHandler, WebsocketHandler } from './utils'
@@ -40,7 +40,6 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
   })
 
   onRequest(fastify)
-  onError(fastify, options.duplex ?? {}, errorHandler)
   onRoute(fastify, options.duplex ?? {}, errorHandler)
   onClose(fastify, state)
 }
