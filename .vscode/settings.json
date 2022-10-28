@@ -10,5 +10,5 @@
   "typescript.updateImportsOnFileMove.enabled": "always",
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-  },
+  }
 }
