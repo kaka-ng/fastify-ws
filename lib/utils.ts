@@ -29,6 +29,9 @@ export function handleUpgrade (ws: Server, duplexOptions: DuplexOptions | undefi
         connection.resume()
       }
     })
+    connection.on('error', (err) => {
+      console.log(err)
+    })
 
     callback(connection)
   })
