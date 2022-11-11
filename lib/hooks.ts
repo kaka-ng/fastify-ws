@@ -48,7 +48,7 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
       if (request[kIsWebsocket]) {
         const webSocketRequest = request as WebsocketFastifyRequest
         void reply.hijack()
-        handleUpgrade(fastify.ws.server, options, request.raw, function (connection) {
+        handleUpgrade(fastify, fastify.ws.server, options, request.raw, function (connection) {
           let result
           webSocketRequest.ws = fastify.ws.createWebSocketEventEmitter(connection)
           // we allow to use the request inside ws class
