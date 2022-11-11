@@ -1,4 +1,4 @@
-import { FastifyReply, FastifyRequest, RawRequestDefaultExpression, RawServerBase, RawServerDefault, RequestGenericInterface } from 'fastify'
+import { FastifyInstance, FastifyReply, FastifyRequest, RawRequestDefaultExpression, RawServerBase, RawServerDefault, RequestGenericInterface } from 'fastify'
 import { IncomingMessage } from 'http'
 import { DuplexOptions } from 'stream'
 import { createWebSocketStream, Server } from 'ws'
@@ -17,7 +17,7 @@ export const defaultErrorHandler: WebsocketErrorHandler = function (error, conne
   connection.destroy(error as any)
 }
 
-export function handleUpgrade (ws: Server, duplexOptions: DuplexOptions | undefined, request: IncomingMessage, callback: (socket: SocketStream) => void): void {
+export function handleUpgrade (fastify: FastifyInstance, ws: Server, duplexOptions: DuplexOptions | undefined, request: IncomingMessage, callback: (socket: SocketStream) => void): void {
   ws.handleUpgrade(request, request[kSocket], request[kSocketHead], function (socket) {
     ws.emit('connection', socket, request)
 
@@ -30,7 +30,7 @@ export function handleUpgrade (ws: Server, duplexOptions: DuplexOptions | undefi
       }
     })
     connection.on('error', (err) => {
-      console.log(err)
+      fastify.log.error(err)
     })
 
     callback(connection)

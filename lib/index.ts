@@ -28,7 +28,7 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
     request[kSocketHead] = head
 
     if (state.isClosing) {
-      handleUpgrade(wsServer, options.duplex, request, (connection) => {
+      handleUpgrade(fastify, wsServer, options.duplex, request, (connection) => {
         connection.socket.close(1001)
       })
     } else {
