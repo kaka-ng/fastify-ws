@@ -2,7 +2,7 @@ import { FastifyInstance, FastifyRequest, RawRequestDefaultExpression, RawServer
 import { Duplex } from 'stream'
 import { Server, WebSocket } from 'ws'
 import { GlobalWebSocketEventEmitter, WebSocketEventEmitter, WebSocketEventEmitterOption } from './class'
-import { kIsWebsocket } from './symbols'
+import { kIsWebsocket, kOnUpgrade } from './symbols'
 
 export type TopicMap = Map<string, Set<WebsocketFastifyRequest>>
 
@@ -12,6 +12,7 @@ export function decorateInstance (fastify: FastifyInstance, wsServer: Server, op
   const event = new GlobalWebSocketEventEmitter(wsServer, options)
 
   fastify.decorate('ws', event)
+  fastify.decorate(kOnUpgrade, null)
 
   return event
 }

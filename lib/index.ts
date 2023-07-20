@@ -1,14 +1,15 @@
 import { ContextConfigDefault, FastifyPluginAsync, RawReplyDefaultExpression, RawRequestDefaultExpression, RawServerBase, RawServerDefault, RequestGenericInterface } from 'fastify'
 import FastifyPlugin from 'fastify-plugin'
-import { ServerResponse } from 'http'
+import { preCloseAsyncHookHandler, preCloseHookHandler } from 'fastify/types/hooks'
+import { IncomingMessage } from 'http'
 import { Duplex, DuplexOptions } from 'stream'
 import { ServerOptions } from 'ws'
 import { WebSocketEventEmitterOption } from './class'
-import { decorateInstance, decorateRequest, FastifyInstanceWS } from './decorators'
-import { onClose, onRequest, onRoute } from './hooks'
+import { FastifyInstanceWS, decorateInstance, decorateRequest } from './decorators'
+import { onPreClose, onRequest, onRoute, onUpgrade } from './hooks'
 import { createServer } from './server'
-import { kIsWebsocket, kSocket, kSocketHead } from './symbols'
-import { defaultErrorHandler, handleUpgrade, WebsocketErrorHandler, WebsocketHandler } from './utils'
+import { kIsWebsocket, kOnUpgrade, kSocket, kSocketHead } from './symbols'
+import { WebsocketErrorHandler, WebsocketHandler, defaultErrorHandler } from './utils'
 
 const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fastify, options): Promise<void> {
   let errorHandler = defaultErrorHandler
@@ -17,31 +18,14 @@ const Websocket: FastifyPluginAsync<WebsocketPluginOptions> = async function (fa
   }
 
   const { httpServer, wsServer } = createServer(fastify, options)
-  const state = { isClosing: false }
 
   decorateInstance(fastify, wsServer, options.event ?? {})
   decorateRequest(fastify)
 
-  httpServer.on('upgrade', function (request, socket, head) {
-    request.isWebSocket = false
-    request[kSocket] = socket
-    request[kSocketHead] = head
-
-    if (state.isClosing) {
-      handleUpgrade(fastify, wsServer, options.duplex, request, (connection) => {
-        connection.socket.close(1001)
-      })
-    } else {
-      const response = new ServerResponse(request)
-      response.assignSocket(socket as any)
-      request.isWebSocket = true
-      fastify.routing(request, response)
-    }
-  })
-
+  onUpgrade(fastify, httpServer)
   onRequest(fastify)
   onRoute(fastify, options.duplex ?? {}, errorHandler)
-  onClose(fastify, state)
+  onPreClose(fastify)
 }
 
 export const fastifyWS = FastifyPlugin(Websocket, {
@@ -90,6 +74,7 @@ declare module 'fastify' {
   interface FastifyInstance<RawServer, RawRequest, RawReply, Logger, TypeProvider> {
     get: RouteShorthandMethod<RawServer, RawRequest, RawReply, TypeProvider>
     ws: FastifyInstanceWS
+    [kOnUpgrade]: (request: IncomingMessage, socket: Duplex, head: Buffer) => void
   }
 }
 
@@ -99,6 +84,7 @@ export interface WebsocketRouteOptions {
 
 export interface WebsocketPluginOptions {
   errorHandler?: WebsocketErrorHandler
+  preClose?: preCloseHookHandler | preCloseAsyncHookHandler
   ws?: Omit<ServerOptions, 'path' | 'noServer'>
   event?: WebSocketEventEmitterOption
   duplex?: DuplexOptions
@@ -106,3 +92,4 @@ export interface WebsocketPluginOptions {
 
 export type { FastifyInstanceWS, WebsocketFastifyRequest, WebsocketFastifyRequestWS } from './decorators'
 export type { WebsocketErrorHandler, WebsocketHandler } from './utils'
+

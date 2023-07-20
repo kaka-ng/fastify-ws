@@ -1,14 +1,45 @@
 import { FastifyInstance } from 'fastify'
-import { DuplexOptions } from 'stream'
-import { resumeWebsocketRequest, WebsocketFastifyRequest } from './decorators'
-import { kIsWebsocket, kSocket } from './symbols'
-import { handleUpgrade, noopHandler, WebsocketHandler } from './utils'
+import { IncomingMessage, Server, ServerResponse } from 'http'
+import { Socket } from 'net'
+import { Duplex, DuplexOptions } from 'stream'
+import { WebsocketFastifyRequest, resumeWebsocketRequest } from './decorators'
+import { kIsWebsocket, kOnUpgrade, kSocket, kSocketHead } from './symbols'
+import { WebsocketHandler, handleUpgrade, noopHandler } from './utils'
+
+export function onUpgrade(fastify: FastifyInstance, httpServer: Server): void {
+  fastify[kOnUpgrade] = function onUpgrade(request: IncomingMessage, socket: Duplex, head: Buffer): void {
+    request.isWebSocket = false
+    request[kSocket] = socket
+    request[kSocketHead] = head
+    
+    try {
+      const response = new ServerResponse(request)
+      response.assignSocket(socket as Socket)
+      request.isWebSocket = true
+      fastify.routing(request, response)
+    } catch(err) {
+      fastify.log.warn({ err }, 'websocket upgrade failed')
+    }
+  }
+
+  httpServer.on('upgrade', fastify[kOnUpgrade])
+}
 
 export function onRequest (fastify: FastifyInstance): void {
   fastify.addHook('onRequest', function (request, _reply, done) {
     request[kIsWebsocket] = typeof request.raw[kSocket] === 'object'
     if (request[kIsWebsocket]) {
       resumeWebsocketRequest(fastify, request as WebsocketFastifyRequest)
+    }
+
+    done()
+  })
+}
+
+export function onResponse (fastify: FastifyInstance): void {
+  fastify.addHook('onRequest', function (request, _reply, done) {
+    if (request[kIsWebsocket]) {
+      request.raw[kSocket].destroy()
     }
 
     done()
@@ -77,16 +108,11 @@ export function onRoute (fastify: FastifyInstance, options: DuplexOptions, error
   })
 }
 
-export function onClose (fastify: FastifyInstance, options: { isClosing: boolean }): void {
-  const oldClose = fastify.server.close
-  // @ts-expect-error
-  fastify.server.close = function (callback) {
-    options.isClosing = true
-
-    // Call oldClose first so that we stop listening. This ensures the
-    // server.clients list will be up to date when we start closing below.
-    oldClose.call(this, callback)
-
+export function onPreClose (fastify: FastifyInstance): void {
+  fastify.addHook('preClose', function(done) {
+    // we do not accept any new upgrade request
+    fastify.server.removeListener('upgrade', fastify[kOnUpgrade])
     fastify.ws.close()
-  }
+    fastify.ws.server.close(done)
+  })
 }
